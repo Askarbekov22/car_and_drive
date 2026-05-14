@@ -19,6 +19,7 @@ dp.include_router(menu.router)
 
 
 async def main():
+
     await init_db()
     print("Бот запущен...")
     await dp.start_polling(bot)
