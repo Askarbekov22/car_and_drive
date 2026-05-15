@@ -42,6 +42,7 @@ async def init_db():
         await add_column_if_not_exists(db, "drivers", "damage_amount", "REAL DEFAULT 0")
         await add_column_if_not_exists(db, "drivers", "driver_salary_total", "REAL DEFAULT 0")
         await add_column_if_not_exists(db, "drivers", "debt", "REAL DEFAULT 0")
+        await add_column_if_not_exists(db, "drivers", "fine_amount_total", "REAL DEFAULT 0")
 
         await db.execute("""
             CREATE TABLE IF NOT EXISTS cars (
@@ -74,6 +75,9 @@ async def init_db():
                 salary_percent REAL DEFAULT 0,
                 recommended_salary REAL DEFAULT 0,
 
+                fine_amount REAL DEFAULT 0,
+                fine_reason TEXT,
+
                 battery_percent INTEGER DEFAULT 0,
 
                 start_front_photo TEXT,
@@ -85,7 +89,6 @@ async def init_db():
                 back_photo TEXT,
                 left_photo TEXT,
                 right_photo TEXT,
-
                 charging_receipt TEXT,
 
                 FOREIGN KEY(driver_id) REFERENCES drivers(id),
@@ -96,6 +99,8 @@ async def init_db():
         await add_column_if_not_exists(db, "shifts", "driver_salary", "REAL DEFAULT 0")
         await add_column_if_not_exists(db, "shifts", "salary_percent", "REAL DEFAULT 0")
         await add_column_if_not_exists(db, "shifts", "recommended_salary", "REAL DEFAULT 0")
+        await add_column_if_not_exists(db, "shifts", "fine_amount", "REAL DEFAULT 0")
+        await add_column_if_not_exists(db, "shifts", "fine_reason", "TEXT")
         await add_column_if_not_exists(db, "shifts", "charging_receipt", "TEXT")
         await add_column_if_not_exists(db, "shifts", "start_front_photo", "TEXT")
         await add_column_if_not_exists(db, "shifts", "start_back_photo", "TEXT")
@@ -138,5 +143,21 @@ async def init_db():
         await add_column_if_not_exists(db, "accidents", "debt_amount", "REAL DEFAULT 0")
         await add_column_if_not_exists(db, "accidents", "updated_at", "TIMESTAMP")
         await add_column_if_not_exists(db, "accidents", "closed_at", "TIMESTAMP")
+
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS driver_fines (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                driver_id INTEGER NOT NULL,
+                shift_id INTEGER,
+                amount REAL DEFAULT 0,
+                reason TEXT,
+                deducted_amount REAL DEFAULT 0,
+                remaining_debt REAL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                FOREIGN KEY(driver_id) REFERENCES drivers(id),
+                FOREIGN KEY(shift_id) REFERENCES shifts(id)
+            )
+        """)
 
         await db.commit()
