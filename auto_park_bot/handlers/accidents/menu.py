@@ -1,0 +1,28 @@
+from aiogram import Router
+from aiogram.types import Message
+from aiogram.fsm.context import FSMContext
+
+from keyboards.accident_keyboards import accident_menu_keyboard
+from keyboards.main import main_menu_keyboard
+
+router = Router()
+
+
+@router.message(lambda message: message.text == "🚨 ДТП")
+async def accidents_menu(message: Message, state: FSMContext):
+    await state.clear()
+
+    await message.answer(
+        "Раздел ДТП 🚨",
+        reply_markup=accident_menu_keyboard()
+    )
+
+
+@router.message(lambda message: message.text == "⬅️ Главное меню")
+async def back_to_main_menu(message: Message, state: FSMContext):
+    await state.clear()
+
+    await message.answer(
+        "Главное меню:",
+        reply_markup=main_menu_keyboard(message.from_user.id)
+    )
