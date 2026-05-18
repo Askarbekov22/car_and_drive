@@ -4,11 +4,12 @@ from config import (
     MANAGER_IDS
 )
 
-
-ROLE_YRYS = "yrys"
-ROLE_SYMYK = "symyk"
-ROLE_MANAGER = "manager"
-ROLE_UNKNOWN = "unknown"
+from constants.roles import (
+    ROLE_YRYS,
+    ROLE_SYMYK,
+    ROLE_MANAGER,
+    ROLE_UNKNOWN
+)
 
 
 def get_user_role(user_id: int):
@@ -25,20 +26,39 @@ def get_user_role(user_id: int):
     return ROLE_UNKNOWN
 
 
-def can_open_section(user_id: int, section: str):
+def can_open_section(
+    user_id: int,
+    section: str
+):
 
     role = get_user_role(user_id)
 
-    if role in [ROLE_YRYS, ROLE_SYMYK]:
+    if role in [
+        ROLE_YRYS,
+        ROLE_SYMYK
+    ]:
         return True
 
     if role == ROLE_MANAGER:
+
         return section in [
             "cars",
-            "drivers"
+            "drivers",
+            "reports"
         ]
 
     return False
+
+
+def can_manager_open_report(
+    report_name: str
+):
+
+    allowed_reports = [
+        "📅 Сегодня"
+    ]
+
+    return report_name in allowed_reports
 
 
 def get_role_name(user_id: int):

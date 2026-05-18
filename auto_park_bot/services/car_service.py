@@ -2,9 +2,19 @@ import aiosqlite
 
 from database import DB_NAME
 
+from constants.car_statuses import (
+    STATUS_FREE,
+    STATUS_BUSY,
+    STATUS_REPAIR
+)
 
-async def add_car(plate_number: str, model: str):
+
+async def add_car(
+    plate_number: str,
+    model: str
+):
     async with aiosqlite.connect(DB_NAME) as db:
+
         await db.execute(
             """
             INSERT INTO cars (
@@ -17,7 +27,7 @@ async def add_car(plate_number: str, model: str):
             (
                 plate_number,
                 model,
-                "free"
+                STATUS_FREE
             )
         )
 
@@ -25,7 +35,9 @@ async def add_car(plate_number: str, model: str):
 
 
 async def get_all_cars():
+
     async with aiosqlite.connect(DB_NAME) as db:
+
         cursor = await db.execute(
             """
             SELECT
@@ -42,7 +54,9 @@ async def get_all_cars():
 
 
 async def get_car_by_id(car_id: int):
+
     async with aiosqlite.connect(DB_NAME) as db:
+
         cursor = await db.execute(
             """
             SELECT
@@ -59,8 +73,22 @@ async def get_car_by_id(car_id: int):
         return await cursor.fetchone()
 
 
-async def update_car_status(car_id: int, status: str):
+async def update_car_status(
+    car_id: int,
+    status: str
+):
+
+    allowed_statuses = [
+        STATUS_FREE,
+        STATUS_BUSY,
+        STATUS_REPAIR
+    ]
+
+    if status not in allowed_statuses:
+        return False
+
     async with aiosqlite.connect(DB_NAME) as db:
+
         await db.execute(
             """
             UPDATE cars
@@ -75,8 +103,15 @@ async def update_car_status(car_id: int, status: str):
 
         await db.commit()
 
+    return True
 
-async def update_car_field(car_id: int, field_name: str, value: str):
+
+async def update_car_field(
+    car_id: int,
+    field_name: str,
+    value: str
+):
+
     allowed_fields = {
         "plate_number",
         "model",
@@ -86,7 +121,19 @@ async def update_car_field(car_id: int, field_name: str, value: str):
     if field_name not in allowed_fields:
         return False
 
+    if field_name == "status":
+
+        allowed_statuses = [
+            STATUS_FREE,
+            STATUS_BUSY,
+            STATUS_REPAIR
+        ]
+
+        if value not in allowed_statuses:
+            return False
+
     async with aiosqlite.connect(DB_NAME) as db:
+
         await db.execute(
             f"""
             UPDATE cars

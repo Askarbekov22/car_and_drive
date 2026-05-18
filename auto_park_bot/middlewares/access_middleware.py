@@ -1,4 +1,9 @@
-from typing import Callable, Dict, Any, Awaitable
+from typing import (
+    Callable,
+    Dict,
+    Any,
+    Awaitable
+)
 
 from aiogram import BaseMiddleware
 from aiogram.types import Message
@@ -6,6 +11,10 @@ from aiogram.types import Message
 from services.access_service import (
     can_open_section,
     get_user_role,
+    can_manager_open_report
+)
+
+from constants.roles import (
     ROLE_MANAGER
 )
 
@@ -43,12 +52,18 @@ class AccessMiddleware(BaseMiddleware):
     ):
 
         if not event.from_user:
-            return await handler(event, data)
+            return await handler(
+                event,
+                data
+            )
 
         text = event.text
 
         if not text:
-            return await handler(event, data)
+            return await handler(
+                event,
+                data
+            )
 
         user_id = event.from_user.id
 
@@ -73,7 +88,7 @@ class AccessMiddleware(BaseMiddleware):
 
             if text in REPORT_BUTTONS:
 
-                if text != "📅 Сегодня":
+                if not can_manager_open_report(text):
 
                     await event.answer(
                         "⛔ Менеджеру доступен только сегодняшний отчет."
@@ -81,4 +96,7 @@ class AccessMiddleware(BaseMiddleware):
 
                     return
 
-        return await handler(event, data)
+        return await handler(
+            event,
+            data
+        )

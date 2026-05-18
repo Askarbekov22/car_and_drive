@@ -2,14 +2,28 @@ import aiosqlite
 
 from database import DB_NAME
 
+from constants.shift_statuses import (
+    STATUS_ACTIVE,
+    STATUS_FINISHED
+)
+
+from constants.car_statuses import (
+    STATUS_BUSY,
+    STATUS_FREE
+)
+
 
 def calculate_driver_salary(turnover: float):
+
     if turnover <= 3000:
         percent = 25
+
     elif turnover <= 4000:
         percent = 30
+
     elif turnover <= 8000:
         percent = 35
+
     else:
         percent = 40
 
@@ -26,59 +40,85 @@ async def create_shift(
     start_left_photo,
     start_right_photo
 ):
+
     async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute("""
+
+        await db.execute(
+            """
             INSERT INTO shifts (
                 driver_id,
                 car_id,
                 start_front_photo,
                 start_back_photo,
                 start_left_photo,
-                start_right_photo
+                start_right_photo,
+                status
             )
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-            driver_id,
-            car_id,
-            start_front_photo,
-            start_back_photo,
-            start_left_photo,
-            start_right_photo
-        ))
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                driver_id,
+                car_id,
+                start_front_photo,
+                start_back_photo,
+                start_left_photo,
+                start_right_photo,
+                STATUS_ACTIVE
+            )
+        )
 
         await db.execute(
-            "UPDATE cars SET status = 'busy' WHERE id = ?",
-            (car_id,)
+            """
+            UPDATE cars
+            SET status = ?
+            WHERE id = ?
+            """,
+            (
+                STATUS_BUSY,
+                car_id
+            )
         )
 
         await db.commit()
 
 
 async def get_active_shifts():
+
     async with aiosqlite.connect(DB_NAME) as db:
-        cursor = await db.execute("""
-            SELECT 
+
+        cursor = await db.execute(
+            """
+            SELECT
                 shifts.id,
                 drivers.full_name,
                 cars.plate_number,
                 cars.model
             FROM shifts
-            JOIN drivers ON shifts.driver_id = drivers.id
-            JOIN cars ON shifts.car_id = cars.id
-            WHERE shifts.status = 'active'
+            JOIN drivers
+                ON shifts.driver_id = drivers.id
+            JOIN cars
+                ON shifts.car_id = cars.id
+            WHERE shifts.status = ?
             ORDER BY shifts.id DESC
-        """)
+            """,
+            (STATUS_ACTIVE,)
+        )
 
         return await cursor.fetchall()
 
 
 async def get_shift_driver_id(shift_id: int):
+
     async with aiosqlite.connect(DB_NAME) as db:
-        cursor = await db.execute("""
+
+        cursor = await db.execute(
+            """
             SELECT driver_id
             FROM shifts
             WHERE id = ?
-        """, (shift_id,))
+            """,
+            (shift_id,)
+        )
 
         result = await cursor.fetchone()
 
@@ -106,13 +146,18 @@ async def finish_shift(
     fine_amount: float = 0,
     fine_reason: str | None = None
 ):
-    recommended_salary, salary_percent = calculate_driver_salary(turnover)
+
+    recommended_salary, salary_percent = (
+        calculate_driver_salary(turnover)
+    )
 
     async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute("""
+
+        await db.execute(
+            """
             UPDATE shifts
-            SET 
-                status = 'finished',
+            SET
+                status = ?,
                 end_time = CURRENT_TIMESTAMP,
                 orders_count = ?,
                 turnover = ?,
@@ -132,49 +177,65 @@ async def finish_shift(
                 right_photo = ?,
                 charging_receipt = ?
             WHERE id = ?
-        """, (
-            orders_count,
-            turnover,
-            cash,
-            card,
-            charging_expense,
-            yandex_commission,
-            driver_salary,
-            salary_percent,
-            recommended_salary,
-            fine_amount,
-            fine_reason,
-            battery_percent,
-            front_photo,
-            back_photo,
-            left_photo,
-            right_photo,
-            charging_receipt,
-            shift_id
-        ))
+            """,
+            (
+                STATUS_FINISHED,
+                orders_count,
+                turnover,
+                cash,
+                card,
+                charging_expense,
+                yandex_commission,
+                driver_salary,
+                salary_percent,
+                recommended_salary,
+                fine_amount,
+                fine_reason,
+                battery_percent,
+                front_photo,
+                back_photo,
+                left_photo,
+                right_photo,
+                charging_receipt,
+                shift_id
+            )
+        )
 
-        cursor = await db.execute("""
+        cursor = await db.execute(
+            """
             SELECT car_id
             FROM shifts
             WHERE id = ?
-        """, (shift_id,))
+            """,
+            (shift_id,)
+        )
 
         car = await cursor.fetchone()
 
         if car:
-            await db.execute("""
+
+            await db.execute(
+                """
                 UPDATE cars
-                SET status = 'free'
+                SET status = ?
                 WHERE id = ?
-            """, (car[0],))
+                """,
+                (
+                    STATUS_FREE,
+                    car[0]
+                )
+            )
 
         await db.commit()
 
 
 async def get_finished_shifts():
+
     async with aiosqlite.connect(DB_NAME) as db:
-        cursor = await db.execute("""
-            SELECT 
+
+        cursor = await db.execute(
+            """
+            SELECT
                 shifts.id,
                 drivers.full_name,
                 cars.plate_number,
@@ -194,20 +255,27 @@ async def get_finished_shifts():
                 shifts.start_time,
                 shifts.end_time
             FROM shifts
-            JOIN drivers ON shifts.driver_id = drivers.id
-            JOIN cars ON shifts.car_id = cars.id
-            WHERE shifts.status = 'finished'
+            JOIN drivers
+                ON shifts.driver_id = drivers.id
+            JOIN cars
+                ON shifts.car_id = cars.id
+            WHERE shifts.status = ?
             ORDER BY shifts.id DESC
             LIMIT 20
-        """)
+            """,
+            (STATUS_FINISHED,)
+        )
 
         return await cursor.fetchall()
 
 
 async def get_shift_by_id(shift_id: int):
+
     async with aiosqlite.connect(DB_NAME) as db:
-        cursor = await db.execute("""
-            SELECT 
+
+        cursor = await db.execute(
+            """
+            SELECT
                 shifts.id,
                 drivers.full_name,
                 cars.plate_number,
@@ -236,17 +304,24 @@ async def get_shift_by_id(shift_id: int):
                 shifts.right_photo,
                 shifts.charging_receipt
             FROM shifts
-            JOIN drivers ON shifts.driver_id = drivers.id
-            JOIN cars ON shifts.car_id = cars.id
+            JOIN drivers
+                ON shifts.driver_id = drivers.id
+            JOIN cars
+                ON shifts.car_id = cars.id
             WHERE shifts.id = ?
-        """, (shift_id,))
+            """,
+            (shift_id,)
+        )
 
         return await cursor.fetchone()
 
 
 async def get_shift_full_by_id(shift_id: int):
+
     async with aiosqlite.connect(DB_NAME) as db:
-        cursor = await db.execute("""
+
+        cursor = await db.execute(
+            """
             SELECT
                 shifts.id,
                 shifts.driver_id,
@@ -256,10 +331,14 @@ async def get_shift_full_by_id(shift_id: int):
                 cars.model,
                 shifts.status
             FROM shifts
-            JOIN drivers ON shifts.driver_id = drivers.id
-            JOIN cars ON shifts.car_id = cars.id
+            JOIN drivers
+                ON shifts.driver_id = drivers.id
+            JOIN cars
+                ON shifts.car_id = cars.id
             WHERE shifts.id = ?
-        """, (shift_id,))
+            """,
+            (shift_id,)
+        )
 
         row = await cursor.fetchone()
 
@@ -277,10 +356,16 @@ async def get_shift_full_by_id(shift_id: int):
         }
 
 
-async def get_shifts_by_period(start_date: str, end_date: str):
+async def get_shifts_by_period(
+    start_date: str,
+    end_date: str
+):
+
     async with aiosqlite.connect(DB_NAME) as db:
-        cursor = await db.execute("""
-            SELECT 
+
+        cursor = await db.execute(
+            """
+            SELECT
                 shifts.id,
                 drivers.full_name,
                 cars.plate_number,
@@ -294,14 +379,20 @@ async def get_shifts_by_period(start_date: str, end_date: str):
                 shifts.fine_amount,
                 shifts.end_time
             FROM shifts
-            JOIN drivers ON shifts.driver_id = drivers.id
-            JOIN cars ON shifts.car_id = cars.id
-            WHERE shifts.status = 'finished'
-            AND DATE(shifts.end_time) BETWEEN DATE(?) AND DATE(?)
+            JOIN drivers
+                ON shifts.driver_id = drivers.id
+            JOIN cars
+                ON shifts.car_id = cars.id
+            WHERE shifts.status = ?
+            AND DATE(shifts.end_time)
+                BETWEEN DATE(?) AND DATE(?)
             ORDER BY shifts.end_time DESC
-        """, (
-            start_date,
-            end_date
-        ))
+            """,
+            (
+                STATUS_FINISHED,
+                start_date,
+                end_date
+            )
+        )
 
         return await cursor.fetchall()
