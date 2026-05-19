@@ -13,7 +13,6 @@ from constants.roles import (
 
 
 def get_user_role(user_id: int):
-
     if user_id in YRYS_IDS:
         return ROLE_YRYS
 
@@ -26,11 +25,7 @@ def get_user_role(user_id: int):
     return ROLE_UNKNOWN
 
 
-def can_open_section(
-    user_id: int,
-    section: str
-):
-
+def can_open_section(user_id: int, section: str):
     role = get_user_role(user_id)
 
     if role in [
@@ -40,29 +35,27 @@ def can_open_section(
         return True
 
     if role == ROLE_MANAGER:
-
         return section in [
             "cars",
             "drivers",
-            "reports"
+            "reports",
+            "shifts",
+            "accidents"
         ]
 
     return False
 
 
-def can_manager_open_report(
-    report_name: str
-):
+def can_edit_data(user_id: int):
+    role = get_user_role(user_id)
 
-    allowed_reports = [
-        "📅 Сегодня"
+    return role in [
+        ROLE_YRYS,
+        ROLE_SYMYK
     ]
-
-    return report_name in allowed_reports
 
 
 def get_role_name(user_id: int):
-
     role = get_user_role(user_id)
 
     if role == ROLE_YRYS:

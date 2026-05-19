@@ -26,33 +26,26 @@ router = Router()
 
 class FinishShiftState(StatesGroup):
     choosing_shift_to_finish = State()
-
     front_photo = State()
     back_photo = State()
     left_photo = State()
     right_photo = State()
-
     battery_percent = State()
-
     orders_count = State()
     turnover = State()
     cash = State()
     card = State()
-
     charging_expense = State()
     charging_receipt = State()
-
     yandex_commission = State()
     driver_salary = State()
-
     fine_amount = State()
     fine_reason = State()
-
     deposit_top_up = State()
     deposit_receipt = State()
 
 
-@router.message(lambda message: message.text == "⛔ Завершить смену")
+@router.message(lambda message: message.text in ["⛔ Завершить смену", "⏹ Завершить смену"])
 async def start_finish_shift(message: Message, state: FSMContext):
     await state.clear()
 
@@ -84,7 +77,7 @@ async def choose_shift(message: Message, state: FSMContext):
 
     await state.update_data(shift_id=shift_id)
 
-    await message.answer("📸 Завершение смены: отправьте фото ПЕРЕДА машины:")
+    await message.answer("Завершение смены: отправьте фото ПЕРЕДА машины:")
     await state.set_state(FinishShiftState.front_photo)
 
 
@@ -95,7 +88,8 @@ async def get_front_photo(message: Message, state: FSMContext):
         return
 
     await state.update_data(front_photo=message.photo[-1].file_id)
-    await message.answer("📸 Отправьте фото ЗАДА машины:")
+
+    await message.answer("Отправьте фото ЗАДА машины:")
     await state.set_state(FinishShiftState.back_photo)
 
 
@@ -106,7 +100,8 @@ async def get_back_photo(message: Message, state: FSMContext):
         return
 
     await state.update_data(back_photo=message.photo[-1].file_id)
-    await message.answer("📸 Отправьте фото ЛЕВОЙ стороны:")
+
+    await message.answer("Отправьте фото ЛЕВОЙ стороны:")
     await state.set_state(FinishShiftState.left_photo)
 
 
@@ -117,7 +112,8 @@ async def get_left_photo(message: Message, state: FSMContext):
         return
 
     await state.update_data(left_photo=message.photo[-1].file_id)
-    await message.answer("📸 Отправьте фото ПРАВОЙ стороны:")
+
+    await message.answer("Отправьте фото ПРАВОЙ стороны:")
     await state.set_state(FinishShiftState.right_photo)
 
 
@@ -128,7 +124,8 @@ async def get_right_photo(message: Message, state: FSMContext):
         return
 
     await state.update_data(right_photo=message.photo[-1].file_id)
-    await message.answer("🔋 Введите заряд машины (%):")
+
+    await message.answer("Введите заряд машины (%):")
     await state.set_state(FinishShiftState.battery_percent)
 
 
@@ -146,6 +143,7 @@ async def get_battery_percent(message: Message, state: FSMContext):
         return
 
     await state.update_data(battery_percent=battery_percent)
+
     await message.answer("Введите количество заказов:")
     await state.set_state(FinishShiftState.orders_count)
 
@@ -154,12 +152,12 @@ async def get_battery_percent(message: Message, state: FSMContext):
 async def get_orders_count(message: Message, state: FSMContext):
     try:
         orders_count = int(message.text)
-
     except ValueError:
         await message.answer("Введите число. Например: 35")
         return
 
     await state.update_data(orders_count=orders_count)
+
     await message.answer("Введите оборот:")
     await state.set_state(FinishShiftState.turnover)
 
@@ -168,12 +166,12 @@ async def get_orders_count(message: Message, state: FSMContext):
 async def get_turnover(message: Message, state: FSMContext):
     try:
         turnover = float(message.text.replace(",", "."))
-
     except ValueError:
         await message.answer("Введите сумму числом. Например: 12500")
         return
 
     await state.update_data(turnover=turnover)
+
     await message.answer("Введите наличку:")
     await state.set_state(FinishShiftState.cash)
 
@@ -182,12 +180,12 @@ async def get_turnover(message: Message, state: FSMContext):
 async def get_cash(message: Message, state: FSMContext):
     try:
         cash = float(message.text.replace(",", "."))
-
     except ValueError:
         await message.answer("Введите сумму числом.")
         return
 
     await state.update_data(cash=cash)
+
     await message.answer("Введите карту / безнал:")
     await state.set_state(FinishShiftState.card)
 
@@ -196,12 +194,12 @@ async def get_cash(message: Message, state: FSMContext):
 async def get_card(message: Message, state: FSMContext):
     try:
         card = float(message.text.replace(",", "."))
-
     except ValueError:
         await message.answer("Введите сумму числом.")
         return
 
     await state.update_data(card=card)
+
     await message.answer("Введите расход на зарядку:")
     await state.set_state(FinishShiftState.charging_expense)
 
@@ -210,13 +208,13 @@ async def get_card(message: Message, state: FSMContext):
 async def get_charging_expense(message: Message, state: FSMContext):
     try:
         charging_expense = float(message.text.replace(",", "."))
-
     except ValueError:
         await message.answer("Введите сумму числом.")
         return
 
     await state.update_data(charging_expense=charging_expense)
-    await message.answer("🧾 Прикрепите чек за зарядку:")
+
+    await message.answer("Прикрепите чек за зарядку:")
     await state.set_state(FinishShiftState.charging_receipt)
 
 
@@ -227,6 +225,7 @@ async def get_charging_receipt(message: Message, state: FSMContext):
         return
 
     await state.update_data(charging_receipt=message.photo[-1].file_id)
+
     await message.answer("Введите комиссию Яндекса:")
     await state.set_state(FinishShiftState.yandex_commission)
 
@@ -235,7 +234,6 @@ async def get_charging_receipt(message: Message, state: FSMContext):
 async def get_yandex_commission(message: Message, state: FSMContext):
     try:
         yandex_commission = float(message.text.replace(",", "."))
-
     except ValueError:
         await message.answer("Введите сумму числом.")
         return
@@ -252,7 +250,7 @@ async def get_yandex_commission(message: Message, state: FSMContext):
     )
 
     await message.answer(
-        f"🤖 Рекомендуемая зарплата водителя:\n\n"
+        f"Рекомендуемая зарплата водителя:\n\n"
         f"Оборот: {turnover:.0f} сом\n"
         f"Процент: {salary_percent}%\n"
         f"Рекомендуемая сумма: {recommended_salary:.0f} сом\n\n"
@@ -348,7 +346,7 @@ async def get_deposit_top_up(message: Message, state: FSMContext):
     await state.update_data(deposit_top_up=deposit_top_up)
 
     if deposit_top_up > 0:
-        await message.answer("🧾 Отправьте фото чека пополнения депозита:")
+        await message.answer("Отправьте фото чека пополнения депозита:")
         await state.set_state(FinishShiftState.deposit_receipt)
     else:
         await finish_shift_final(
@@ -451,13 +449,13 @@ async def finish_shift_final(
         f"Заряд машины: {data['battery_percent']}%\n"
         f"Расход на зарядку: {charging_expense:.0f} сом\n"
         f"Комиссия Яндекса: {yandex_commission:.0f} сом\n\n"
-        f"🤖 Рекомендованная зарплата: {recommended_salary:.0f} сом ({salary_percent}%)\n"
-        f"💵 Фактическая зарплата: {driver_salary:.0f} сом\n\n"
+        f"Рекомендованная зарплата: {recommended_salary:.0f} сом ({salary_percent}%)\n"
+        f"Фактическая зарплата: {driver_salary:.0f} сом\n\n"
     )
 
     if fine_amount > 0:
         text += (
-            f"🚫 Штраф: {fine_amount:.0f} сом\n"
+            f"Штраф: {fine_amount:.0f} сом\n"
             f"Причина: {fine_reason}\n"
         )
 
@@ -474,7 +472,7 @@ async def finish_shift_final(
 
         text += "\n"
     else:
-        text += "🚫 Штрафа нет\n\n"
+        text += "Штрафа нет\n\n"
 
     text += (
         f"Итого расходы: {total_expenses:.0f} сом\n"
@@ -483,7 +481,7 @@ async def finish_shift_final(
 
     if deposit_top_up > 0 and new_deposit is not None:
         text += (
-            f"💰 Пополнение депозита: {deposit_top_up:.0f} сом\n"
+            f"Пополнение депозита: {deposit_top_up:.0f} сом\n"
             f"Текущий депозит водителя: {new_deposit:.0f} сом\n"
         )
 
@@ -497,7 +495,7 @@ async def finish_shift_final(
                 f"До лимита 20 000 осталось: {20000 - new_deposit:.0f} сом"
             )
     else:
-        text += "💰 Пополнения депозита не было."
+        text += "Пополнения депозита не было."
 
     await message.answer(
         text,
