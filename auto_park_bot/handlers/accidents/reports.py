@@ -24,7 +24,7 @@ def _is_valid_date(value: str) -> bool:
     return len(value) == 10 and value[4] == "-" and value[7] == "-"
 
 
-@router.message(lambda message: message.text in [" Отчет ДТП", "📊 Отчет ДТП"])
+@router.message(lambda message: message.text in ["Отчет ДТП", " Отчет ДТП", "📊 Отчет ДТП"])
 async def accident_report(message: Message, state: FSMContext):
     await state.clear()
 
