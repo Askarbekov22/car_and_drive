@@ -1,15 +1,23 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
 
 
 def accident_menu_keyboard():
     keyboard = [
         [
             KeyboardButton(text="➕ Добавить ДТП"),
-            KeyboardButton(text="📋 Список ДТП"),
+            KeyboardButton(text=" Список ДТП"),
         ],
         [
             KeyboardButton(text="✏️ Редактировать ДТП"),
-            KeyboardButton(text="📊 Отчет ДТП"),
+            KeyboardButton(text=" Отчет ДТП"),
+        ],
+        [
+            KeyboardButton(text="📊 Скачать Excel ДТП"),
         ],
         [
             KeyboardButton(text="⬅️ Главное меню"),
@@ -24,10 +32,30 @@ def accident_menu_keyboard():
 
 def payment_type_keyboard():
     keyboard = [
-        [InlineKeyboardButton(text="Водитель", callback_data="accident_payment_driver")],
-        [InlineKeyboardButton(text="Компания", callback_data="accident_payment_company")],
-        [InlineKeyboardButton(text="Страховая", callback_data="accident_payment_insurance")],
-        [InlineKeyboardButton(text="Смешанная оплата", callback_data="accident_payment_mixed")],
+        [
+            InlineKeyboardButton(
+                text="Водитель",
+                callback_data="accident_payment_driver"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="Компания",
+                callback_data="accident_payment_company"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="Страховая / КАСКО",
+                callback_data="accident_payment_insurance"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="Смешанная оплата",
+                callback_data="accident_payment_mixed"
+            )
+        ],
     ]
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
@@ -68,8 +96,32 @@ def edit_accident_fields_keyboard(accident_id):
         ],
         [
             InlineKeyboardButton(
-                text="Сумма ущерба",
-                callback_data=f"edit_accident_damage_{accident_id}"
+                text="Место ДТП",
+                callback_data=f"edit_accident_place_{accident_id}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="Тип ДТП",
+                callback_data=f"edit_accident_type_{accident_id}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="Кто виновен",
+                callback_data=f"edit_accident_guilty_{accident_id}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="Факт ремонт",
+                callback_data=f"edit_accident_repair_fact_{accident_id}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="Оценка",
+                callback_data=f"edit_accident_estimate_{accident_id}"
             )
         ],
         [
@@ -82,6 +134,18 @@ def edit_accident_fields_keyboard(accident_id):
             InlineKeyboardButton(
                 text="Оплаченная сумма",
                 callback_data=f"edit_accident_paid_{accident_id}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="Простой смены",
+                callback_data=f"edit_accident_downtime_{accident_id}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="Потери",
+                callback_data=f"edit_accident_losses_{accident_id}"
             )
         ],
         [
@@ -111,7 +175,7 @@ def edit_payment_type_keyboard(accident_id):
         ],
         [
             InlineKeyboardButton(
-                text="Страховая",
+                text="Страховая / КАСКО",
                 callback_data=f"set_payment_insurance_{accident_id}"
             )
         ],

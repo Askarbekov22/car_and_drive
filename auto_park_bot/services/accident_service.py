@@ -6,12 +6,22 @@ from services.driver_service import add_driver_debt
 from services.shift_service import get_shift_full_by_id
 
 
+def calculate_difference(estimate_amount: float, repair_fact: float, losses_amount: float) -> float:
+    return (estimate_amount or 0) - (repair_fact or 0) - (losses_amount or 0)
+
+
 async def create_accident(
     shift_id: int,
     accident_date: str,
-    damage_amount: float,
+    accident_place: str,
+    accident_type: str,
+    guilty_party: str,
+    repair_fact: float,
+    estimate_amount: float,
     payment_type: str,
     paid_amount: float,
+    downtime_shifts: int,
+    losses_amount: float,
     photo_1: str,
     photo_2: str,
     note: str
@@ -24,10 +34,17 @@ async def create_accident(
     driver_id = shift["driver_id"]
     car_id = shift["car_id"]
 
-    debt_amount = damage_amount - paid_amount
+    damage_amount = estimate_amount or 0
+    debt_amount = damage_amount - (paid_amount or 0)
 
     if debt_amount < 0:
         debt_amount = 0
+
+    difference_amount = calculate_difference(
+        estimate_amount=estimate_amount,
+        repair_fact=repair_fact,
+        losses_amount=losses_amount
+    )
 
     async with aiosqlite.connect(DB_NAME) as db:
         cursor = await db.execute("""
@@ -36,25 +53,41 @@ async def create_accident(
                 driver_id,
                 car_id,
                 accident_date,
+                accident_place,
+                accident_type,
+                guilty_party,
+                repair_fact,
+                estimate_amount,
                 damage_amount,
                 payment_type,
                 paid_amount,
                 debt_amount,
+                downtime_shifts,
+                losses_amount,
+                difference_amount,
                 photo_1,
                 photo_2,
                 note,
                 status
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             shift_id,
             driver_id,
             car_id,
             accident_date,
+            accident_place,
+            accident_type,
+            guilty_party,
+            repair_fact,
+            estimate_amount,
             damage_amount,
             payment_type,
             paid_amount,
             debt_amount,
+            downtime_shifts,
+            losses_amount,
+            difference_amount,
             photo_1,
             photo_2,
             note,
@@ -88,7 +121,15 @@ async def get_all_accidents():
                 accidents.debt_amount,
                 accidents.note,
                 accidents.created_at,
-                accidents.status
+                accidents.status,
+                accidents.accident_place,
+                accidents.accident_type,
+                accidents.guilty_party,
+                accidents.repair_fact,
+                accidents.estimate_amount,
+                accidents.downtime_shifts,
+                accidents.losses_amount,
+                accidents.difference_amount
             FROM accidents
             LEFT JOIN drivers ON accidents.driver_id = drivers.id
             LEFT JOIN cars ON accidents.car_id = cars.id
@@ -118,7 +159,15 @@ async def get_accident_by_id(accident_id: int):
                 status,
                 created_at,
                 updated_at,
-                closed_at
+                closed_at,
+                accident_place,
+                accident_type,
+                guilty_party,
+                repair_fact,
+                estimate_amount,
+                downtime_shifts,
+                losses_amount,
+                difference_amount
             FROM accidents
             WHERE id = ?
         """, (accident_id,))
@@ -132,7 +181,15 @@ async def update_accident_field(accident_id: int, field_name: str, value):
         "damage_amount",
         "payment_type",
         "paid_amount",
-        "note"
+        "note",
+        "accident_place",
+        "accident_type",
+        "guilty_party",
+        "repair_fact",
+        "estimate_amount",
+        "downtime_shifts",
+        "losses_amount",
+        "difference_amount",
     }
 
     if field_name not in allowed_fields:
@@ -141,8 +198,7 @@ async def update_accident_field(accident_id: int, field_name: str, value):
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute(f"""
             UPDATE accidents
-            SET 
-                {field_name} = ?,
+            SET {field_name} = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         """, (value, accident_id))
@@ -150,7 +206,6 @@ async def update_accident_field(accident_id: int, field_name: str, value):
         await db.commit()
 
     await recalculate_accident_debt(accident_id)
-
     return True
 
 
@@ -160,20 +215,37 @@ async def recalculate_accident_debt(accident_id: int):
     if not accident:
         return False
 
-    damage_amount = accident[5] or 0
     paid_amount = accident[7] or 0
+    repair_fact = accident[19] or 0
+    estimate_amount = accident[20] or 0
+    losses_amount = accident[22] or 0
 
+    damage_amount = estimate_amount
     debt_amount = damage_amount - paid_amount
 
     if debt_amount < 0:
         debt_amount = 0
 
+    difference_amount = calculate_difference(
+        estimate_amount=estimate_amount,
+        repair_fact=repair_fact,
+        losses_amount=losses_amount
+    )
+
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("""
             UPDATE accidents
-            SET debt_amount = ?
+            SET damage_amount = ?,
+                debt_amount = ?,
+                difference_amount = ?,
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-        """, (debt_amount, accident_id))
+        """, (
+            damage_amount,
+            debt_amount,
+            difference_amount,
+            accident_id
+        ))
 
         await db.commit()
 
@@ -191,8 +263,7 @@ async def close_accident(accident_id: int):
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("""
             UPDATE accidents
-            SET 
-                status = 'closed',
+            SET status = 'closed',
                 closed_at = CURRENT_TIMESTAMP
             WHERE id = ?
         """, (accident_id,))
@@ -240,3 +311,36 @@ async def get_accident_report_by_dates(start_date: str, end_date: str):
         """, (start_date, end_date))
 
         return await cursor.fetchone()
+
+
+async def get_accidents_for_excel():
+    async with aiosqlite.connect(DB_NAME) as db:
+        db.row_factory = aiosqlite.Row
+
+        cursor = await db.execute("""
+            SELECT
+                accidents.id,
+                accidents.accident_date,
+                cars.plate_number,
+                drivers.full_name,
+                accidents.accident_place,
+                accidents.accident_type,
+                accidents.guilty_party,
+                accidents.repair_fact,
+                accidents.estimate_amount,
+                accidents.payment_type,
+                accidents.status,
+                accidents.downtime_shifts,
+                accidents.losses_amount,
+                accidents.difference_amount,
+                accidents.paid_amount,
+                accidents.debt_amount,
+                accidents.note
+            FROM accidents
+            LEFT JOIN drivers ON accidents.driver_id = drivers.id
+            LEFT JOIN cars ON accidents.car_id = cars.id
+            ORDER BY accidents.id ASC
+        """)
+
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]

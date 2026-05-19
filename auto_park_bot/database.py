@@ -62,35 +62,27 @@ async def init_db():
                 status TEXT DEFAULT 'active',
                 start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 end_time TIMESTAMP,
-
                 orders_count INTEGER DEFAULT 0,
                 turnover REAL DEFAULT 0,
                 cash REAL DEFAULT 0,
                 card REAL DEFAULT 0,
-
                 fuel_expense REAL DEFAULT 0,
                 yandex_commission REAL DEFAULT 0,
-
                 driver_salary REAL DEFAULT 0,
                 salary_percent REAL DEFAULT 0,
                 recommended_salary REAL DEFAULT 0,
-
                 fine_amount REAL DEFAULT 0,
                 fine_reason TEXT,
-
                 battery_percent INTEGER DEFAULT 0,
-
                 start_front_photo TEXT,
                 start_back_photo TEXT,
                 start_left_photo TEXT,
                 start_right_photo TEXT,
-
                 front_photo TEXT,
                 back_photo TEXT,
                 left_photo TEXT,
                 right_photo TEXT,
                 charging_receipt TEXT,
-
                 FOREIGN KEY(driver_id) REFERENCES drivers(id),
                 FOREIGN KEY(car_id) REFERENCES cars(id)
             )
@@ -114,22 +106,17 @@ async def init_db():
                 driver_id INTEGER,
                 car_id INTEGER,
                 accident_date TEXT,
-
                 damage_amount REAL DEFAULT 0,
                 payment_type TEXT,
                 paid_amount REAL DEFAULT 0,
                 debt_amount REAL DEFAULT 0,
-
                 photo_1 TEXT,
                 photo_2 TEXT,
-
                 note TEXT,
                 status TEXT DEFAULT 'open',
-
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP,
                 closed_at TIMESTAMP,
-
                 FOREIGN KEY(shift_id) REFERENCES shifts(id),
                 FOREIGN KEY(driver_id) REFERENCES drivers(id),
                 FOREIGN KEY(car_id) REFERENCES cars(id)
@@ -144,6 +131,16 @@ async def init_db():
         await add_column_if_not_exists(db, "accidents", "updated_at", "TIMESTAMP")
         await add_column_if_not_exists(db, "accidents", "closed_at", "TIMESTAMP")
 
+        # Новые поля для полноценного учета ДТП
+        await add_column_if_not_exists(db, "accidents", "accident_place", "TEXT")
+        await add_column_if_not_exists(db, "accidents", "accident_type", "TEXT")
+        await add_column_if_not_exists(db, "accidents", "guilty_party", "TEXT")
+        await add_column_if_not_exists(db, "accidents", "repair_fact", "REAL DEFAULT 0")
+        await add_column_if_not_exists(db, "accidents", "estimate_amount", "REAL DEFAULT 0")
+        await add_column_if_not_exists(db, "accidents", "downtime_shifts", "INTEGER DEFAULT 0")
+        await add_column_if_not_exists(db, "accidents", "losses_amount", "REAL DEFAULT 0")
+        await add_column_if_not_exists(db, "accidents", "difference_amount", "REAL DEFAULT 0")
+
         await db.execute("""
             CREATE TABLE IF NOT EXISTS driver_fines (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -154,7 +151,6 @@ async def init_db():
                 deducted_amount REAL DEFAULT 0,
                 remaining_debt REAL DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
                 FOREIGN KEY(driver_id) REFERENCES drivers(id),
                 FOREIGN KEY(shift_id) REFERENCES shifts(id)
             )
