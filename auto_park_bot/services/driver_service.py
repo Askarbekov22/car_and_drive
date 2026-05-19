@@ -62,13 +62,14 @@ async def get_all_drivers():
             FROM drivers
             ORDER BY full_name ASC
         """)
+
         return await cursor.fetchall()
 
 
 async def get_all_drivers_full():
     async with aiosqlite.connect(DB_NAME) as db:
         cursor = await db.execute("""
-            SELECT 
+            SELECT
                 id,
                 full_name,
                 phone,
@@ -84,7 +85,72 @@ async def get_all_drivers_full():
             FROM drivers
             ORDER BY full_name ASC
         """)
+
         return await cursor.fetchall()
+
+
+async def get_driver_by_id(driver_id: int):
+    async with aiosqlite.connect(DB_NAME) as db:
+        cursor = await db.execute("""
+            SELECT
+                id,
+                full_name,
+                phone,
+                passport_front,
+                passport_back,
+                address,
+                extra_contact_1,
+                extra_contact_2,
+                hire_date,
+                contract_file,
+                deposit_amount,
+                deposit_receipt,
+                deposit_limit,
+                deposit_status,
+                total_orders,
+                income_from_driver,
+                total_turnover,
+                damage_amount,
+                driver_salary_total,
+                debt,
+                fine_amount_total,
+                created_at
+            FROM drivers
+            WHERE id = ?
+        """, (driver_id,))
+
+        return await cursor.fetchone()
+
+
+async def update_driver_field(driver_id: int, field_name: str, value):
+    allowed_fields = {
+        "full_name",
+        "phone",
+        "address",
+        "extra_contact_1",
+        "extra_contact_2",
+        "hire_date",
+        "deposit_amount",
+        "debt",
+        "damage_amount",
+    }
+
+    if field_name not in allowed_fields:
+        return False
+
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute(
+            f"""
+            UPDATE drivers
+            SET {field_name} = ?
+            WHERE id = ?
+            """,
+            (value, driver_id)
+        )
+
+        await db.commit()
+
+    return True
 
 
 async def search_drivers(query: str):
@@ -92,7 +158,7 @@ async def search_drivers(query: str):
 
     async with aiosqlite.connect(DB_NAME) as db:
         cursor = await db.execute("""
-            SELECT 
+            SELECT
                 id,
                 full_name,
                 phone,
@@ -106,8 +172,7 @@ async def search_drivers(query: str):
                 debt,
                 fine_amount_total
             FROM drivers
-            WHERE full_name LIKE ?
-            OR phone LIKE ?
+            WHERE full_name LIKE ? OR phone LIKE ?
             ORDER BY full_name ASC
         """, (
             search_text,
@@ -132,13 +197,11 @@ async def add_deposit_to_driver(driver_id: int, amount: float):
 
         current_deposit = driver[0] or 0
         new_deposit = current_deposit + amount
-
         deposit_status = "stopped" if new_deposit >= 20000 else "active"
 
         await db.execute("""
             UPDATE drivers
-            SET 
-                deposit_amount = ?,
+            SET deposit_amount = ?,
                 deposit_status = ?
             WHERE id = ?
         """, (
@@ -149,7 +212,7 @@ async def add_deposit_to_driver(driver_id: int, amount: float):
 
         await db.commit()
 
-        return new_deposit
+    return new_deposit
 
 
 async def deduct_fine_from_driver_deposit(
@@ -175,16 +238,13 @@ async def deduct_fine_from_driver_deposit(
 
         deducted_amount = min(current_deposit, amount)
         remaining_debt = amount - deducted_amount
-
         new_deposit = current_deposit - deducted_amount
         new_debt = current_debt + remaining_debt
-
         deposit_status = "stopped" if new_deposit >= 20000 else "active"
 
         await db.execute("""
             UPDATE drivers
-            SET
-                deposit_amount = ?,
+            SET deposit_amount = ?,
                 deposit_status = ?,
                 debt = ?,
                 fine_amount_total = COALESCE(fine_amount_total, 0) + ?
@@ -218,13 +278,13 @@ async def deduct_fine_from_driver_deposit(
 
         await db.commit()
 
-        return {
-            "old_deposit": current_deposit,
-            "new_deposit": new_deposit,
-            "deducted_amount": deducted_amount,
-            "remaining_debt": remaining_debt,
-            "new_debt": new_debt
-        }
+    return {
+        "old_deposit": current_deposit,
+        "new_deposit": new_deposit,
+        "deducted_amount": deducted_amount,
+        "remaining_debt": remaining_debt,
+        "new_debt": new_debt
+    }
 
 
 async def get_driver_fines(driver_id: int):
@@ -256,8 +316,7 @@ async def update_driver_shift_totals(
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("""
             UPDATE drivers
-            SET
-                total_orders = COALESCE(total_orders, 0) + ?,
+            SET total_orders = COALESCE(total_orders, 0) + ?,
                 total_turnover = COALESCE(total_turnover, 0) + ?,
                 income_from_driver = COALESCE(income_from_driver, 0) + ?,
                 driver_salary_total = COALESCE(driver_salary_total, 0) + ?
@@ -277,8 +336,7 @@ async def add_driver_debt(driver_id: int, amount: float):
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("""
             UPDATE drivers
-            SET 
-                debt = COALESCE(debt, 0) + ?,
+            SET debt = COALESCE(debt, 0) + ?,
                 damage_amount = COALESCE(damage_amount, 0) + ?
             WHERE id = ?
         """, (
@@ -331,7 +389,7 @@ async def get_driver_income_history(driver_id: int):
                 shifts.fine_reason
             FROM shifts
             WHERE shifts.driver_id = ?
-            AND shifts.status = 'finished'
+              AND shifts.status = 'finished'
             ORDER BY shifts.id DESC
             LIMIT 30
         """, (driver_id,))
@@ -352,7 +410,7 @@ async def get_driver_income_summary(driver_id: int):
                 COALESCE(SUM(fine_amount), 0)
             FROM shifts
             WHERE driver_id = ?
-            AND status = 'finished'
+              AND status = 'finished'
         """, (driver_id,))
 
         return await cursor.fetchone()
@@ -373,13 +431,11 @@ async def get_drivers_rating():
                 COALESCE(drivers.damage_amount, 0) AS damage_amount,
                 COALESCE(drivers.fine_amount_total, 0) AS fine_amount_total
             FROM drivers
-            LEFT JOIN shifts ON drivers.id = shifts.driver_id 
-                AND shifts.status = 'finished'
+            LEFT JOIN shifts
+                ON drivers.id = shifts.driver_id
+               AND shifts.status = 'finished'
             GROUP BY drivers.id
-            ORDER BY 
-                total_turnover DESC,
-                total_orders DESC,
-                debt ASC
+            ORDER BY total_turnover DESC, total_orders DESC, debt ASC
         """)
 
         return await cursor.fetchall()
