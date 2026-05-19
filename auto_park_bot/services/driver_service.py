@@ -126,13 +126,24 @@ async def update_driver_field(driver_id: int, field_name: str, value):
     allowed_fields = {
         "full_name",
         "phone",
+        "passport_front",
+        "passport_back",
         "address",
         "extra_contact_1",
         "extra_contact_2",
         "hire_date",
+        "contract_file",
         "deposit_amount",
-        "debt",
+        "deposit_receipt",
+        "deposit_limit",
+        "deposit_status",
+        "total_orders",
+        "income_from_driver",
+        "total_turnover",
         "damage_amount",
+        "driver_salary_total",
+        "debt",
+        "fine_amount_total",
     }
 
     if field_name not in allowed_fields:

@@ -1,8 +1,7 @@
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from keyboards.drivers import drivers_menu_keyboard
 from services.access_service import can_edit_data
@@ -16,20 +15,63 @@ class EditDriverState(StatesGroup):
     new_value = State()
 
 
+EDIT_DRIVER_FIELDS = {
+    "full_name": "ФИО",
+    "phone": "Телефон",
+    "passport_front": "Паспорт перед",
+    "passport_back": "Паспорт зад",
+    "address": "Адрес",
+    "extra_contact_1": "Доп. контакт 1",
+    "extra_contact_2": "Доп. контакт 2",
+    "hire_date": "Дата принятия",
+    "contract_file": "Договор",
+    "deposit_amount": "Депозит",
+    "deposit_receipt": "Чек депозита",
+    "deposit_limit": "Лимит депозита",
+    "deposit_status": "Статус депозита",
+    "total_orders": "Заказы",
+    "income_from_driver": "Доход с водителя",
+    "total_turnover": "Оборот",
+    "damage_amount": "Ущерб",
+    "driver_salary_total": "Зарплата",
+    "debt": "Долг",
+    "fine_amount_total": "Штрафы",
+}
+
+
+NUMERIC_FIELDS = {
+    "deposit_amount",
+    "deposit_limit",
+    "total_orders",
+    "income_from_driver",
+    "total_turnover",
+    "damage_amount",
+    "driver_salary_total",
+    "debt",
+    "fine_amount_total",
+}
+
+
+FILE_FIELDS = {
+    "passport_front",
+    "passport_back",
+    "contract_file",
+    "deposit_receipt",
+}
+
+
 def edit_driver_fields_keyboard(driver_id: int):
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="ФИО", callback_data=f"edit_driver_full_name_{driver_id}")],
-            [InlineKeyboardButton(text="Телефон", callback_data=f"edit_driver_phone_{driver_id}")],
-            [InlineKeyboardButton(text="Адрес", callback_data=f"edit_driver_address_{driver_id}")],
-            [InlineKeyboardButton(text="Доп. контакт 1", callback_data=f"edit_driver_extra_contact_1_{driver_id}")],
-            [InlineKeyboardButton(text="Доп. контакт 2", callback_data=f"edit_driver_extra_contact_2_{driver_id}")],
-            [InlineKeyboardButton(text="Дата принятия", callback_data=f"edit_driver_hire_date_{driver_id}")],
-            [InlineKeyboardButton(text="Депозит", callback_data=f"edit_driver_deposit_amount_{driver_id}")],
-            [InlineKeyboardButton(text="Долг", callback_data=f"edit_driver_debt_{driver_id}")],
-            [InlineKeyboardButton(text="Ущерб", callback_data=f"edit_driver_damage_amount_{driver_id}")],
-        ]
-    )
+    keyboard = []
+
+    for field, title in EDIT_DRIVER_FIELDS.items():
+        keyboard.append([
+            InlineKeyboardButton(
+                text=title,
+                callback_data=f"edit_driver_field:{driver_id}:{field}"
+            )
+        ])
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
 @router.message(lambda message: message.text == "✏️ Редактировать водителя")
@@ -66,45 +108,47 @@ async def get_driver_id(message: Message, state: FSMContext):
         f"Телефон: {driver[2]}\n"
         f"Адрес: {driver[5]}\n"
         f"Депозит: {driver[10]} сом\n"
-        f"Долг: {driver[22]} сом\n\n"
+        f"Лимит депозита: {driver[12]} сом\n"
+        f"Статус депозита: {driver[13]}\n"
+        f"Заказы: {driver[14]}\n"
+        f"Доход: {driver[15]} сом\n"
+        f"Оборот: {driver[16]} сом\n"
+        f"Ущерб: {driver[17]} сом\n"
+        f"Зарплата: {driver[18]} сом\n"
+        f"Долг: {driver[19]} сом\n"
+        f"Штрафы: {driver[20]} сом\n\n"
         f"Что изменить?",
         reply_markup=edit_driver_fields_keyboard(driver_id)
     )
 
 
-@router.callback_query(F.data.startswith("edit_driver_"))
+@router.callback_query(F.data.startswith("edit_driver_field:"))
 async def choose_driver_field(callback: CallbackQuery, state: FSMContext):
     if not can_edit_data(callback.from_user.id):
         await callback.message.answer("⛔ Редактировать водителей могут только Ырыс и Сыймык.")
         await callback.answer()
         return
 
-    parts = callback.data.split("_")
-    driver_id = int(parts[-1])
-    field_name = "_".join(parts[2:-1])
+    _, driver_id, field_name = callback.data.split(":")
 
-    allowed_fields = {
-        "full_name": "Введите новое ФИО:",
-        "phone": "Введите новый телефон:",
-        "address": "Введите новый адрес:",
-        "extra_contact_1": "Введите доп. контакт 1:",
-        "extra_contact_2": "Введите доп. контакт 2:",
-        "hire_date": "Введите дату принятия:",
-        "deposit_amount": "Введите сумму депозита:",
-        "debt": "Введите сумму долга:",
-        "damage_amount": "Введите сумму ущерба:",
-    }
-
-    if field_name not in allowed_fields:
+    if field_name not in EDIT_DRIVER_FIELDS:
         await callback.answer()
         return
 
     await state.update_data(
-        driver_id=driver_id,
+        driver_id=int(driver_id),
         field_name=field_name
     )
 
-    await callback.message.answer(allowed_fields[field_name])
+    if field_name in FILE_FIELDS:
+        await callback.message.answer(
+            f"Отправьте новый файл/фото для поля: {EDIT_DRIVER_FIELDS[field_name]}"
+        )
+    else:
+        await callback.message.answer(
+            f"Введите новое значение для поля: {EDIT_DRIVER_FIELDS[field_name]}"
+        )
+
     await state.set_state(EditDriverState.new_value)
     await callback.answer()
 
@@ -120,18 +164,36 @@ async def save_driver_new_value(message: Message, state: FSMContext):
 
     driver_id = data["driver_id"]
     field_name = data["field_name"]
-    value = message.text.strip()
 
-    if not value:
-        await message.answer("Значение не может быть пустым.")
-        return
-
-    if field_name in ["deposit_amount", "debt", "damage_amount"]:
-        try:
-            value = float(value.replace(",", "."))
-        except ValueError:
-            await message.answer("Введите сумму цифрами.")
+    if field_name in FILE_FIELDS:
+        if message.photo:
+            value = message.photo[-1].file_id
+        elif message.document:
+            value = message.document.file_id
+        else:
+            await message.answer("Нужно отправить фото или файл.")
             return
+    else:
+        value = message.text.strip()
+
+        if not value:
+            await message.answer("Значение не может быть пустым.")
+            return
+
+        if field_name in NUMERIC_FIELDS:
+            try:
+                if field_name == "total_orders":
+                    value = int(value)
+                else:
+                    value = float(value.replace(",", "."))
+            except ValueError:
+                await message.answer("Введите число.")
+                return
+
+        if field_name == "deposit_status":
+            if value not in ["active", "stopped"]:
+                await message.answer("Статус депозита должен быть: active или stopped.")
+                return
 
     result = await update_driver_field(
         driver_id=driver_id,
@@ -145,7 +207,7 @@ async def save_driver_new_value(message: Message, state: FSMContext):
         return
 
     await message.answer(
-        "✅ Водитель обновлен",
+        "✅ Данные водителя обновлены",
         reply_markup=drivers_menu_keyboard()
     )
 
