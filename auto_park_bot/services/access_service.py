@@ -28,10 +28,7 @@ def get_user_role(user_id: int):
 def can_open_section(user_id: int, section: str):
     role = get_user_role(user_id)
 
-    if role in [
-        ROLE_YRYS,
-        ROLE_SYMYK
-    ]:
+    if role in [ROLE_YRYS, ROLE_SYMYK]:
         return True
 
     if role == ROLE_MANAGER:
@@ -49,10 +46,17 @@ def can_open_section(user_id: int, section: str):
 def can_edit_data(user_id: int):
     role = get_user_role(user_id)
 
-    return role in [
-        ROLE_YRYS,
-        ROLE_SYMYK
+    return role in [ROLE_YRYS, ROLE_SYMYK]
+
+
+def can_manager_open_report(report_name: str):
+    allowed_reports = [
+        " Сегодня",
+        "Сегодня",
+        "📊 Сегодня"
     ]
+
+    return report_name in allowed_reports
 
 
 def get_role_name(user_id: int):
