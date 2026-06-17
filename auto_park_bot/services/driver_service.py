@@ -122,6 +122,27 @@ async def get_driver_by_id(driver_id: int):
         return await cursor.fetchone()
 
 
+async def get_driver_active_car(driver_id: int):
+    async with aiosqlite.connect(DB_NAME) as db:
+        cursor = await db.execute("""
+            SELECT
+                cars.id,
+                cars.plate_number,
+                cars.model,
+                cars.status,
+                shifts.id,
+                shifts.start_time
+            FROM shifts
+            JOIN cars ON shifts.car_id = cars.id
+            WHERE shifts.driver_id = ?
+              AND shifts.status = 'active'
+            ORDER BY shifts.id DESC
+            LIMIT 1
+        """, (driver_id,))
+
+        return await cursor.fetchone()
+
+
 async def update_driver_field(driver_id: int, field_name: str, value):
     allowed_fields = {
         "full_name",
@@ -173,7 +194,16 @@ async def search_drivers(query: str):
                 id,
                 full_name,
                 phone,
+                passport_front,
+                passport_back,
+                address,
+                extra_contact_1,
+                extra_contact_2,
+                hire_date,
+                contract_file,
                 deposit_amount,
+                deposit_receipt,
+                deposit_limit,
                 deposit_status,
                 total_orders,
                 income_from_driver,
@@ -181,7 +211,8 @@ async def search_drivers(query: str):
                 damage_amount,
                 driver_salary_total,
                 debt,
-                fine_amount_total
+                fine_amount_total,
+                created_at
             FROM drivers
             WHERE full_name LIKE ? OR phone LIKE ?
             ORDER BY full_name ASC

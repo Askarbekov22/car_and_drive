@@ -4,12 +4,12 @@ from aiogram.types import (
 )
 
 from services.access_service import (
-    can_open_section
+    can_open_section,
+    can_edit_data
 )
 
 
 def main_menu_keyboard(user_id=None):
-
     keyboard = []
 
     first_row = []
@@ -62,6 +62,11 @@ def main_menu_keyboard(user_id=None):
     ):
         third_row.append(
             KeyboardButton(text="📊 Отчёты")
+        )
+
+    if user_id is None or can_edit_data(user_id):
+        third_row.append(
+            KeyboardButton(text="🛡 База данных")
         )
 
     if third_row:

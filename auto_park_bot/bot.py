@@ -9,7 +9,7 @@ from middlewares.access_middleware import (
     AccessMiddleware
 )
 
-from handlers import menu, reports
+from handlers import menu, reports, backups
 
 from handlers.cars import (
     router as cars_router
@@ -40,12 +40,12 @@ dp.include_router(cars_router)
 dp.include_router(drivers_router)
 dp.include_router(shifts_router)
 dp.include_router(accidents_router)
+dp.include_router(backups.router)
 dp.include_router(reports.router)
 dp.include_router(menu.router)
 
 
 async def main():
-
     await init_db()
 
     print("Бот запущен...")
